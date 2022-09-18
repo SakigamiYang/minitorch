@@ -1,6 +1,6 @@
 
 
-<img src="http://minitorch.github.io/_images/minitorch.svg">
+<img src="http://minitorch.github.io/minitorch.svg">
 
 This repo is the full student code for minitorch. It is designed as a 
 single repo that can be completed part by part following the guide book. 
