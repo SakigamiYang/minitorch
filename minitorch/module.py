@@ -21,13 +21,23 @@ class Module:
 
     def train(self):
         "Set the mode of this module and all descendent modules to `train`."
-        # TODO: Implement for Task 0.4.
-        raise NotImplementedError('Need to implement for Task 0.4')
+        module_queue = list()
+        module_queue.append(self)
+        while module_queue:
+            first = module_queue.pop(0)
+            first.training = True
+            for module in first._modules.values():
+                module_queue.append(module)
 
     def eval(self):
         "Set the mode of this module and all descendent modules to `eval`."
-        # TODO: Implement for Task 0.4.
-        raise NotImplementedError('Need to implement for Task 0.4')
+        module_queue = list()
+        module_queue.append(self)
+        while module_queue:
+            first = module_queue.pop(0)
+            first.training = False
+            for module in first._modules.values():
+                module_queue.append(module)
 
     def named_parameters(self):
         """
@@ -37,13 +47,28 @@ class Module:
         Returns:
             list of pairs: Contains the name and :class:`Parameter` of each ancestor parameter.
         """
-        # TODO: Implement for Task 0.4.
-        raise NotImplementedError('Need to implement for Task 0.4')
+        params = list()
+        module_queue = list()
+        module_queue.append(('', self))
+        while module_queue:
+            prefix, first = module_queue.pop(0)
+            params.extend((prefix + param_name, param)
+                          for param_name, param in first._parameters.items())
+            for module_name, module in first._modules.items():
+                module_queue.append((prefix + module_name + '.', module))
+        return params
 
     def parameters(self):
         "Enumerate over all the parameters of this module and its descendents."
-        # TODO: Implement for Task 0.4.
-        raise NotImplementedError('Need to implement for Task 0.4')
+        params = list()
+        module_queue = list()
+        module_queue.append(self)
+        while module_queue:
+            first = module_queue.pop(0)
+            params.extend(first._parameters.values())
+            for module in first._modules.values():
+                module_queue.append(module)
+        return params
 
     def add_parameter(self, k, v):
         """
