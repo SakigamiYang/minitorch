@@ -273,8 +273,13 @@ class FunctionBase:
         """
         # Tip: Note when implementing this function that
         # cls.backward may return either a value or a tuple.
-        # TODO: Implement for Task 1.3.
-        raise NotImplementedError('Need to implement for Task 1.3')
+        backward_results = cls.backward(ctx, d_output)
+        if not isinstance(backward_results, tuple):
+            backward_results = (backward_results,)
+
+        return [(input_, backward_result)
+                for input_, backward_result in zip(inputs, backward_results)
+                if not is_constant(input_)]
 
 
 # Algorithms for backpropagation
