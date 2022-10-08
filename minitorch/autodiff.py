@@ -190,10 +190,7 @@ class History:
         Returns:
             list of numbers : a derivative with respect to `inputs`
         """
-        if self.last_fn:
-            return self.last_fn.chain_rule(self.ctx, self.inputs, d_output)
-        else:
-            return d_output
+        return self.last_fn.chain_rule(self.ctx, self.inputs, d_output)
 
 
 class FunctionBase:
@@ -300,40 +297,32 @@ def topological_sort(variable):
         list of Variables : Non-constant Variables in topological order
                             starting from the right.
     """
-    graph = dict()  # for node pair
-    var_mapping = dict()  # for name-entity searching
+    permanent_marked = list()
+    temporary_marked = list()
+    result = list()
 
-    # BFS
-    queue = list()
-    if not is_constant(variable):
-        queue.append(variable)
-        while queue:
-            current_var = queue.pop(0)
-            graph.setdefault(current_var.unique_id, list())
-            var_mapping[current_var.unique_id] = current_var
+    def visit(n):
+        if is_constant(n):
+            return
+        if n.unique_id in permanent_marked:
+            return
+        if n.unique_id in temporary_marked:
+            raise RuntimeError('Not a DAG')
 
-            if current_var.history.inputs:
-                for sub_var in filter(lambda x: not is_constant(x), current_var.history.inputs):
-                    graph.setdefault(sub_var.unique_id, list())
-                    graph[sub_var.unique_id].append(current_var.unique_id)
-                    queue.append(sub_var)
+        temporary_marked.append(n.unique_id)
+        if n.is_leaf():
+            pass
+        else:
+            for input_node in n.history.inputs:
+                visit(input_node)
 
-    # topological sort
-    sorted_var_names = list()
-    while graph:
-        # find the leaves
-        leaves = set(k for k, v in graph.items() if not v)
-        sorted_var_names.extend(leaves)
-        # pop the leaves
-        for k in leaves:
-            graph.pop(k)
-        # remove leaves from other nodes
-        for k, v in graph.items():
-            for leaf in leaves:
-                while leaf in v:
-                    v.remove(leaf)
-            graph[k] = v
-    return [var_mapping[name] for name in sorted_var_names]
+        temporary_marked.remove(n.unique_id)
+        permanent_marked.append(n.unique_id)
+
+        result.insert(0, n)
+
+    visit(variable)
+    return result
 
 
 def backpropagate(variable, deriv):
@@ -354,6 +343,7 @@ def backpropagate(variable, deriv):
 
     derivs = {variable.unique_id: deriv}
     for var in sorted_vars:
+        derivs.setdefault(var.unique_id, 0.0)
         d_output = derivs[var.unique_id]
         if var.is_leaf():
             var.accumulate_derivative(d_output)

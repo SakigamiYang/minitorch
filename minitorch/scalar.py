@@ -27,7 +27,8 @@ def central_difference(f, *vals, arg=0, epsilon=1e-6):
     forward_diff = f(*val_ls)
     val_ls[arg] -= 2 * epsilon  # x + eps -> x - eps
     backward_diff = f(*val_ls)
-    return (forward_diff - backward_diff) / 2.0 / epsilon
+    deriv = (forward_diff - backward_diff) / (2.0 * epsilon)
+    return deriv
 
 
 # ## Task 1.2 and 1.4

@@ -95,7 +95,7 @@ EPS = 1e-6
 
 def log(x):
     ":math:`f(x) = log(x)`"
-    return math.log(x + EPS)
+    return math.log(x) if x else math.log(EPS)
 
 
 def exp(x):
@@ -110,7 +110,7 @@ def log_back(x, d):
 
 def inv(x):
     ":math:`f(x) = 1/x`"
-    return 1 / (x + EPS)
+    return 1 / x if x else 1 / EPS
 
 
 def inv_back(x, d):
