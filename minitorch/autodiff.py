@@ -190,8 +190,10 @@ class History:
         Returns:
             list of numbers : a derivative with respect to `inputs`
         """
-        # TODO: Implement for Task 1.4.
-        raise NotImplementedError('Need to implement for Task 1.4')
+        if self.last_fn:
+            return self.last_fn.chain_rule(self.ctx, self.inputs, d_output)
+        else:
+            return d_output
 
 
 class FunctionBase:
@@ -273,12 +275,10 @@ class FunctionBase:
         """
         # Tip: Note when implementing this function that
         # cls.backward may return either a value or a tuple.
-        backward_results = cls.backward(ctx, d_output)
-        if not isinstance(backward_results, tuple):
-            backward_results = (backward_results,)
-
-        return [(input_, backward_result)
-                for input_, backward_result in zip(inputs, backward_results)
+        derivatives = cls.backward(ctx, d_output)
+        derivatives = wrap_tuple(derivatives)
+        return [(input_, deriv)
+                for input_, deriv in zip(inputs, derivatives)
                 if not is_constant(input_)]
 
 
@@ -300,8 +300,40 @@ def topological_sort(variable):
         list of Variables : Non-constant Variables in topological order
                             starting from the right.
     """
-    # TODO: Implement for Task 1.4.
-    raise NotImplementedError('Need to implement for Task 1.4')
+    graph = dict()  # for node pair
+    var_mapping = dict()  # for name-entity searching
+
+    # BFS
+    queue = list()
+    if not is_constant(variable):
+        queue.append(variable)
+        while queue:
+            current_var = queue.pop(0)
+            graph.setdefault(current_var.unique_id, list())
+            var_mapping[current_var.unique_id] = current_var
+
+            if current_var.history.inputs:
+                for sub_var in filter(lambda x: not is_constant(x), current_var.history.inputs):
+                    graph.setdefault(sub_var.unique_id, list())
+                    graph[sub_var.unique_id].append(current_var.unique_id)
+                    queue.append(sub_var)
+
+    # topological sort
+    sorted_var_names = list()
+    while graph:
+        # find the leaves
+        leaves = set(k for k, v in graph.items() if not v)
+        sorted_var_names.extend(leaves)
+        # pop the leaves
+        for k in leaves:
+            graph.pop(k)
+        # remove leaves from other nodes
+        for k, v in graph.items():
+            for leaf in leaves:
+                while leaf in v:
+                    v.remove(leaf)
+            graph[k] = v
+    return [var_mapping[name] for name in sorted_var_names]
 
 
 def backpropagate(variable, deriv):
@@ -317,5 +349,15 @@ def backpropagate(variable, deriv):
 
     No return. Should write to its results to the derivative values of each leaf through `accumulate_derivative`.
     """
-    # TODO: Implement for Task 1.4.
-    raise NotImplementedError('Need to implement for Task 1.4')
+
+    sorted_vars = topological_sort(variable)
+
+    derivs = {variable.unique_id: deriv}
+    for var in sorted_vars:
+        d_output = derivs[var.unique_id]
+        if var.is_leaf():
+            var.accumulate_derivative(d_output)
+        else:
+            for input_var, d in var.history.backprop_step(d_output):
+                derivs.setdefault(input_var.unique_id, 0.0)
+                derivs[input_var.unique_id] += d
